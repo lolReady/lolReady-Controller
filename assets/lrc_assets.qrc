@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="lrc_assets_img">
+    <file>img/qrcode.png</file>
+    <file>img/banner.jpg</file>
+  </qresource>
+</RCC>
