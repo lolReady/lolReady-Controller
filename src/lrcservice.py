@@ -1,3 +1,4 @@
+import os
 import functools
 import coloredlogs
 import logging
@@ -6,7 +7,7 @@ import socketio
 
 sio = socketio.AsyncClient()
 
-host = "wss://lolready-server.herokuapp.com/"
+host = os.environ["HOST"]  # "wss://lolready-server.herokuapp.com/"
 
 
 coloredlogs.install()
