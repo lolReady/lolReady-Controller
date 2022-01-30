@@ -1,9 +1,10 @@
+import os
 import sys
 
 from PyQt5 import QtWidgets, QtCore
 
 import lrcgui
-import lrcserver
+import lrcservice
 
 
 def start(app):
@@ -12,16 +13,12 @@ def start(app):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    window = lrcgui.Ui()
+    ui = lrcgui.Ui()
 
-    lrcserver_thread = QtCore.QThread()
-
-    server = lrcserver.LRCServer(window)
-
-    server.moveToThread(lrcserver_thread)
-
-    lrcserver_thread.started.connect(server.start)
-
-    lrcserver_thread.start()
+    lrcservice_thread = QtCore.QThread()
+    service = lrcservice.LRCService(os.environ["ORIGIN_SERVER"], ui)
+    service.moveToThread(lrcservice_thread)
+    lrcservice_thread.started.connect(service.startAsyncClient)
+    lrcservice_thread.start()
 
     start(app)
