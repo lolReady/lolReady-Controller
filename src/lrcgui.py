@@ -15,7 +15,6 @@ class Ui(QtWidgets.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         self.ui = lrc.Ui_LRC_MainWindow()
-
         self.ui.setupUi(self)
         self.show()
 
@@ -35,3 +34,6 @@ class Ui(QtWidgets.QMainWindow):
 
         # TODO: remove this
         self.ui.LRC_qr.setScaledContents(True)
+
+    def removeQr(self):
+        self.ui.LRC_qr.clear()

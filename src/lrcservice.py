@@ -1,35 +1,35 @@
+from cmath import log
 import os
 import uuid
 import asyncio
 import functools
-import coloredlogs
 import logging
 import socketio
 
 from PyQt5 import QtCore
 
+import lrclistener
+
 
 class LRCService(QtCore.QObject, socketio.ClientNamespace):
     def __init__(self, origin, ui) -> None:
         super(LRCService, self).__init__()
-        coloredlogs.install()
-        logging.basicConfig(level=logging.INFO)
 
         self.origin = origin
         self.ui = ui
-        self.uuid = None
+        self.token = None
 
-        if not os.path.exists(".uuid"):
-            self.writeUUID()
+        if not os.path.exists(".token"):
+            self.writeToken()
         else:
-            self.readUUID()
+            self.readToken()
 
-    def readUUID(self):
-        with open(".uuid", "r") as f:
-            self.uuid = f.read()
+    def readToken(self):
+        with open(".token", "r") as f:
+            self.token = f.read()
 
-    def writeUUID(self):
-        with open(".uuid", "w") as f:
+    def writeToken(self):
+        with open(".token", "w") as f:
             f.write(str(uuid.uuid4()))
 
     def startAsyncClient(self):
@@ -90,19 +90,37 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
 
         @sio.event
         async def ping(*args, **kwargs):
-            data = args[0]
-            response = {**data}
-            response["method"] = "RESPONSE"
-
-            await sio.emit("ping_resp", response)
+            args = args[0]
+            resp = await self.listener.request(**args)
+            response = await resp.json()
+            print(response)
+            await sio.emit("ping_resp", {"room": args["room"], "data": response})
 
         @sio.event
         async def ping_resp(*args, **kwargs):
             pass
 
+        @sio.event
+        async def subscribe(*args, **kwargs):
+            await self.listener.subscribe(*args, **kwargs)
+
+        @sio.event
+        async def subscribe_resp(*args, **kwargs):
+            print(args)
+
+        @sio.event
+        async def unsubscribe(*args, **kwargs):
+            await self.listener.unsubscribe(*args, **kwargs)
+
+        @sio.event
+        async def unsubscribe_resp(*args, **kwargs):
+            print(args)
+
         async def start():
+            self.listener = await lrclistener.LRCListener.start()
+            self.listener.sio = sio
             await sio.connect(self.origin)
-            await sio.emit("login", {"room": self.uuid})
+            await sio.emit("login", {"room": self.token})
             await sio.wait()
 
         asyncio.run(start())
