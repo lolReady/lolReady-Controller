@@ -90,6 +90,7 @@ class LRCListener:
         asyncio.create_task(eventLoop(self))
 
     async def subscribe(self, *args, **kwargs):
+        print("SUBSCRIBE+++", args)
         room, data = args[0].values()
 
         if not self.room:
@@ -100,6 +101,7 @@ class LRCListener:
                 self.events.append(event)
 
     async def unsubscribe(self, *args, **kwargs):
+        print("UNSUBSCRIBE+++", args)
         room, data = args[0].values()
 
         if not self.room:

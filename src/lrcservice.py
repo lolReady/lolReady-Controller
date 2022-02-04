@@ -75,10 +75,12 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
 
         @sio.event
         async def login_resp(*args, **kwargs):
-            data = args[0]
+            payload = args[0]
+            data = payload["data"]
 
-            if data["error"]:
-                logging.error(f"LRC_SERVICE:LOGIN_RESPONSE - {data['error']}")
+            if payload["error"]:
+                logging.error(
+                    f"LRC_SERVICE:LOGIN_RESPONSE - {payload['error']}")
                 return
 
             logging.info(f"LRC_SERVICE:LOGIN_RESPONSE - SUCCESSFULL")
@@ -102,6 +104,7 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
 
         @sio.event
         async def subscribe(*args, **kwargs):
+            print(args)
             await self.listener.subscribe(*args, **kwargs)
 
         @sio.event
@@ -110,6 +113,7 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
 
         @sio.event
         async def unsubscribe(*args, **kwargs):
+            print(args)
             await self.listener.unsubscribe(*args, **kwargs)
 
         @sio.event
