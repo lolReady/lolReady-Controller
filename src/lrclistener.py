@@ -1,7 +1,5 @@
-from email.mime import base
 import os
 import logging
-from pprint import pprint
 import psutil
 import aiohttp
 import asyncio
@@ -9,7 +7,6 @@ import websockets
 import ssl
 import pathlib
 import json
-import aioconsole
 
 import requests
 
@@ -20,8 +17,7 @@ class LRCListener:
         self = LRCListener()
         self.sio = None
         self.room = None
-        self.subscriber = []
-        self.events = []
+        self.endpoints = []
 
         league_client_process = None
         while True:
@@ -81,7 +77,7 @@ class LRCListener:
                             i = msg.index("data")
                             c = msg[i-2:-1]
                             d = json.loads(c)
-                            if d["uri"] in self.events and self.room:
+                            if (d["uri"] in self.endpoints) and self.room:
                                 await self.sio.emit("subscribe_resp", {"room": self.room, **d})
 
                 except websockets.exceptions.ConnectionClosed as e:
@@ -89,91 +85,46 @@ class LRCListener:
 
         asyncio.create_task(eventLoop(self))
 
-    async def subscribe(self, *args, **kwargs):
-        print("SUBSCRIBE+++", args)
-        room, data = args[0].values()
-
+    async def subscribe(self, payload):
         if not self.room:
-            self.room = room
+            self.room = payload["room"]
 
-        for event in data:
-            if event not in self.events:
-                self.events.append(event)
+        for endpoint in payload["data"]:
+            if endpoint not in self.endpoints:
+                self.endpoints.append(endpoint)
 
-    async def unsubscribe(self, *args, **kwargs):
-        print("UNSUBSCRIBE+++", args)
-        room, data = args[0].values()
+        logging.info(
+            f"LRC_SERVICE<SUBSCRIBE> - {payload['data']}")
 
+    async def unsubscribe(self, payload):
         if not self.room:
-            self.room = room
+            self.room = payload["room"]
 
-        for event in data:
-            if event in self.events:
-                del self.events[self.events.index(event)]
+        for endpoint in payload["data"]:
+            if endpoint in self.endpoints:
+                del self.endpoints[self.endpoints.index(endpoint)]
 
-    async def request(self, **kwargs):
+        logging.info(
+            f"LRC_SERVICE<UNSUBSCRIBE> - {payload['data']}")
+
+    async def request(self, payload):
         if not self.session:
             return
 
-        method = kwargs["method"]
-        endpoint = kwargs["endpoint"]
+        method = payload["method"]
+        endpoint = payload["endpoint"]
         query = None
         data = None
 
-        values = kwargs.keys()
+        values = payload.keys()
 
         if "query" in values:
-            query = kwargs["query"]
+            query = payload["query"]
 
         if "data" in values:
-            data = kwargs["data"][0]
+            data = payload["data"][0]
+
+        logging.info(
+            f"LRC_SERVICE<REQUEST> - {payload['endpoint']}")
 
         return await self.session.request(method=method, url=f"https://{self._app_url}{endpoint}{'?='+query if query else ''}", json=data, ssl=self.ssl_context)
-
-
-async def run():
-    global lis
-    lis = await LRCListener.start()
-
-    events = {
-    }
-
-    currently = []
-
-    while True:
-        cmd = await aioconsole.ainput(">>>")
-
-        if "set" in cmd:
-            event = cmd.split()[1]
-            events[event] = True
-
-        elif "events" in cmd:
-            pprint(events)
-        elif "currently" in cmd:
-            pprint(currently)
-        elif "del" in cmd:
-            event = cmd.split()[1]
-            if event in events.keys():
-                events[event] = False
-        else:
-            print("Command not defined")
-
-        for e in events.keys():
-            if events[e] and (e not in currently):
-                currently.append(e)
-                await lis.ws.send(f"[5, \"{e}\"]")
-
-            if not events[e] and (e in currently):
-                i = currently.index(e)
-                del currently[i]
-                await lis.ws.send(f"[6, \"{e}\"]")
-
-        await asyncio.sleep(0.5)
-
-
-"""
-if __name__ == "__main__":
-    import aioconsole
-    # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(start())
-"""

@@ -26,11 +26,12 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
 
     def readToken(self):
         with open(".token", "r") as f:
-            self.token = f.read()
+            self.token = str(f.read()).strip()
 
     def writeToken(self):
         with open(".token", "w") as f:
-            f.write(str(uuid.uuid4()))
+            self.token = str(uuid.uuid4())
+            f.write(self.token)
 
     def startAsyncClient(self):
         sio = socketio.AsyncClient()
@@ -66,59 +67,47 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
                 f"LRC_SERVICE:DISCONNECT - DISCONNECTED FROM SERVER")
 
         @sio.event
-        def login(*args, **kwargs):
-            pass
-
-        @sio.event
-        def logout(*args, **kwargs):
-            pass
-
-        @sio.event
-        async def login_resp(*args, **kwargs):
-            payload = args[0]
-            data = payload["data"]
-
+        async def login_resp(payload):
             if payload["error"]:
                 logging.error(
                     f"LRC_SERVICE:LOGIN_RESPONSE - {payload['error']}")
                 return
 
             logging.info(f"LRC_SERVICE:LOGIN_RESPONSE - SUCCESSFULL")
-            self.ui.setQr(data["room"])
+            self.ui.setQr(payload["room"])
 
         @sio.event
         async def logout_resp(*args, **kwargs):
             pass
 
         @sio.event
-        async def ping(*args, **kwargs):
-            args = args[0]
-            resp = await self.listener.request(**args)
-            response = await resp.json()
-            print(response)
-            await sio.emit("ping_resp", {"room": args["room"], "data": response})
+        async def ping(payload):
+            response = await self.listener.request(payload)
+
+            await sio.emit("ping_resp", {
+                **payload,
+                "data": await response.json()
+            })
 
         @sio.event
         async def ping_resp(*args, **kwargs):
             pass
 
         @sio.event
-        async def subscribe(*args, **kwargs):
-            print(args)
-            await self.listener.subscribe(*args, **kwargs)
+        async def subscribe(payload):
+            await self.listener.subscribe(payload)
 
         @sio.event
-        async def subscribe_resp(*args, **kwargs):
-            print(args)
+        async def subscribe_resp(payload):
+            pass
 
         @sio.event
-        async def unsubscribe(*args, **kwargs):
-            print(args)
-            await self.listener.unsubscribe(*args, **kwargs)
+        async def unsubscribe(payload):
+            await self.listener.unsubscribe(payload)
 
         @sio.event
         async def unsubscribe_resp(*args, **kwargs):
-            print(args)
+            pass
 
         async def start():
             self.listener = await lrclistener.LRCListener.start()
