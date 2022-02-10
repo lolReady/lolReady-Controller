@@ -74,7 +74,7 @@ class LRCService(QtCore.QObject, socketio.ClientNamespace):
                 return
 
             logging.info(f"LRC_SERVICE:LOGIN_RESPONSE - SUCCESSFULL")
-            self.ui.setQr(payload["room"])
+            self.ui.setQr("LOLREADY@"+payload["room"])
 
         @sio.event
         async def logout_resp(*args, **kwargs):
